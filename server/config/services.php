@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'webhook' => [
+        'incoming_secret' => env('WEBHOOK_INCOMING_SECRET', 'military-inventory-webhook-secret'),
+    ],
+
 ];

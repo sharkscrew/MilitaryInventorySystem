@@ -1,0 +1,114 @@
+{
+  "info": {
+    "name": "Military Inventory System API",
+    "description": "Laravel backend — Roxas City academic project",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000/api" },
+    { "key": "webhookSecret", "value": "military-inventory-webhook-secret" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{baseUrl}}/health" }
+    },
+    {
+      "name": "Dashboard",
+      "request": { "method": "GET", "url": "{{baseUrl}}/dashboard" }
+    },
+    {
+      "name": "Categories",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/categories" } },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Medical Supplies\",\n  \"description\": \"First aid and medical kits\"\n}"
+            },
+            "url": "{{baseUrl}}/categories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Inventory Items",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/inventory-items" } },
+        {
+          "name": "Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category_id\": 1,\n  \"item_code\": \"UNI-003\",\n  \"name\": \"Patrol Cap\",\n  \"quantity\": 20,\n  \"reorder_level\": 5,\n  \"location\": \"Warehouse A\"\n}"
+            },
+            "url": "{{baseUrl}}/inventory-items"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Stock Transaction (Issue)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"inventory_item_id\": 2,\n  \"type\": \"issue\",\n  \"quantity\": 1,\n  \"personnel_name\": \"Cpl. Demo\",\n  \"reference_no\": \"ISS-DEMO-001\",\n  \"remarks\": \"Webhook demo issue\"\n}"
+        },
+        "url": "{{baseUrl}}/stock-transactions"
+      }
+    },
+    {
+      "name": "Webhooks",
+      "item": [
+        { "name": "List Events", "request": { "method": "GET", "url": "{{baseUrl}}/webhooks/events" } },
+        {
+          "name": "Create Subscription",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Demo\",\n  \"target_url\": \"https://webhook.site/your-unique-id\",\n  \"secret\": \"demo-webhook-secret-change-me-32\",\n  \"events\": [\"stock.low\", \"stock.transaction\", \"inventory.created\"],\n  \"is_active\": true\n}"
+            },
+            "url": "{{baseUrl}}/webhooks/subscriptions"
+          }
+        },
+        { "name": "Delivery Log", "request": { "method": "GET", "url": "{{baseUrl}}/webhooks/deliveries" } },
+        {
+          "name": "Incoming (signed)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const secret = pm.collectionVariables.get('webhookSecret');",
+                  "const body = pm.request.body.raw;",
+                  "const sig = CryptoJS.HmacSHA256(body, secret).toString(CryptoJS.enc.Hex);",
+                  "pm.request.headers.upsert({ key: 'X-Webhook-Signature', value: sig });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"procurement.stock_received\",\n  \"data\": {\n    \"item_code\": \"UNI-001\",\n    \"quantity\": 48,\n    \"personnel_name\": \"Supply Officer\",\n    \"remarks\": \"Postman incoming demo\"\n  }\n}"
+            },
+            "url": "{{baseUrl}}/webhooks/incoming"
+          }
+        }
+      ]
+    }
+  ]
+}
