@@ -1,11 +1,14 @@
+import AxiosInstance from '../services/AxiosInstance'
 import { useEffect, useState } from 'react'
-import { api, type InventoryItem, type Paginated, type StockTransaction } from '../api'
+import type { InventoryItem, Paginated, StockTransaction } from '../types'
+import ToastMessage from '../components/ToastMessage/ToastMessage'
+import SubmitButton from '../components/Button/SubmitButton'
+import CloseButton from '../components/Button/CloseButton'
+import RemoveButton from '../components/Button/RemoveButton'
+import ModalCloseButton from '../components/Button/modalCloseButton'
 
-// ─── TYPES ────────────────────────────────────────────────────────────────────
-// Extended transaction type to include optional fields not yet in api.ts
 type Transaction = StockTransaction & { reference_no?: string; remarks?: string }
 
-// ─── TRANSACTION TYPE BADGE ───────────────────────────────────────────────────
 const TYPE_STYLES: Record<string, string> = {
   receive: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
   issue: 'bg-red-500/10 text-red-400 border border-red-500/20',
@@ -13,7 +16,7 @@ const TYPE_STYLES: Record<string, string> = {
   adjustment: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
 }
 
-function TypeBadge({ type }: { type: string }) {
+const TypeBadge = ({ type }: { type: string }) => {
   const style = TYPE_STYLES[type] ?? 'bg-white/10 text-white/50 border border-white/10'
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${style}`}>
@@ -22,115 +25,76 @@ function TypeBadge({ type }: { type: string }) {
   )
 }
 
-// ─── TOAST ────────────────────────────────────────────────────────────────────
-function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
-  if (!message) return null
-  const styles = {
-    success: 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400',
-    error: 'bg-red-500/10 border border-red-500/20 text-red-400',
-  }
-  return <div className={`text-sm rounded-xl px-4 py-3 ${styles[type]}`}>{message}</div>
-}
+const Input = ({ name, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { name: string }) => (
+  <input
+    name={name}
+    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/20"
+    {...props}
+  />
+)
 
-// ─── FORM PRIMITIVES ──────────────────────────────────────────────────────────
-function Input({ name, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { name: string }) {
-  return (
-    <input
-      name={name}
-      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-white/20"
-      {...props}
-    />
-  )
-}
+const Select = ({ name, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { name: string }) => (
+  <select
+    name={name}
+    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 [&>option]:bg-neutral-900"
+    {...props}
+  >
+    {children}
+  </select>
+)
 
-function Select({ name, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { name: string }) {
-  return (
-    <select
-      name={name}
-      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-white/20 [&>option]:bg-neutral-900"
-      {...props}
-    >
-      {children}
-    </select>
-  )
-}
+const Label = ({ children, label }: { children: React.ReactNode; label: string }) => (
+  <label className="flex flex-col gap-1.5">
+    <span className="text-xs text-white/40 font-medium uppercase tracking-wide">{label}</span>
+    {children}
+  </label>
+)
 
-function Label({ children, label }: { children: React.ReactNode; label: string }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs text-white/40 font-medium uppercase tracking-wide">{label}</span>
-      {children}
-    </label>
-  )
-}
-
-// ─── DELETE CONFIRM MODAL ─────────────────────────────────────────────────────
-// ↓ Change modal background/border/button colors here
-function DeleteModal({
-  transaction,
-  onConfirm,
-  onCancel,
-  loading,
+const DeleteModal = ({
+  transaction, onConfirm, onCancel, loading,
 }: {
   transaction: Transaction
   onConfirm: () => void
   onCancel: () => void
   loading: boolean
-}) {
-  return (
-    // Backdrop
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4">
-        <div>
-          <h3 className="text-white font-medium text-base">Delete transaction?</h3>
-          <p className="text-white/40 text-sm mt-1">
-            This will permanently remove the{' '}
-            <span className="text-white/70 font-medium">{transaction.type}</span> record for{' '}
-            <span className="text-white/70 font-medium">
-              {transaction.inventory_item?.name ?? '—'}
-            </span>
-            . This cannot be undone.
-          </p>
-        </div>
-
-        <div className="flex gap-3 pt-1">
-          {/* ↓ Change cancel button style here */}
-          <button
-            onClick={onCancel}
-            className="flex-1 bg-white/5 border border-white/10 text-white/70 text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/10 transition-colors"
-          >
-            Cancel
-          </button>
-          {/* ↓ Change delete confirm button style here */}
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex-1 bg-red-500/80 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-red-500 transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
+}) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+    <div className="relative bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4">
+      <ModalCloseButton onClose={onCancel} />
+      <div>
+        <h3 className="text-white font-medium text-base">Delete transaction?</h3>
+        <p className="text-white/40 text-sm mt-1">
+          This will permanently remove the{' '}
+          <span className="text-white/70 font-medium">{transaction.type}</span> record for{' '}
+          <span className="text-white/70 font-medium">{transaction.inventory_item?.name ?? '—'}</span>.
+          This cannot be undone.
+        </p>
+      </div>
+      <div className="flex gap-3 pt-1">
+        <CloseButton
+          label="Cancel"
+          onClose={onCancel}
+          newClassName="flex-1 bg-white/5 border border-white/10 text-white/70 text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/10 transition-colors"
+        />
+        <RemoveButton
+          label={loading ? 'Deleting…' : 'Delete'}
+          onRemove={onConfirm}
+          newClassname="flex-1 bg-red-500/80 text-white text-sm font-medium px-4 py-2 rounded-xl hover:bg-red-500 transition-colors disabled:opacity-50"
+        />
       </div>
     </div>
-  )
-}
+  </div>
+)
 
-// ─── EDIT MODAL ───────────────────────────────────────────────────────────────
-// ↓ To add/remove editable fields, add/remove <Label> blocks here
-// Note: editing quantity recalculates balance_after on the backend
-function EditModal({
-  transaction,
-  items,
-  onSave,
-  onCancel,
-  loading,
+const EditModal = ({
+  transaction, items, onSave, onCancel, loading,
 }: {
   transaction: Transaction
   items: InventoryItem[]
   onSave: (id: number, data: Partial<Transaction>) => void
   onCancel: () => void
   loading: boolean
-}) {
+}) => {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = new FormData(e.currentTarget)
@@ -146,27 +110,23 @@ function EditModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg space-y-5">
+      <div className="relative bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg space-y-5">
+        <ModalCloseButton onClose={onCancel} />
         <div>
           <h3 className="text-white font-medium text-base">Edit transaction</h3>
           <p className="text-white/30 text-xs mt-0.5">Changes will recalculate the balance on the backend.</p>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Label label="Item">
               <Select name="inventory_item_id" required defaultValue={transaction.inventory_item?.id}>
                 {items.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.item_code} — {item.name}
-                  </option>
+                  <option key={item.id} value={item.id}>{item.item_code} — {item.name}</option>
                 ))}
               </Select>
             </Label>
-
             <Label label="Type">
               <Select name="type" required defaultValue={transaction.type}>
-                {/* ↓ Keep in sync with TYPE_STYLES and the record form above */}
                 <option value="receive">Receive</option>
                 <option value="issue">Issue</option>
                 <option value="return">Return</option>
@@ -174,7 +134,6 @@ function EditModal({
               </Select>
             </Label>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <Label label="Quantity">
               <Input name="quantity" type="number" min="1" required defaultValue={transaction.quantity} />
@@ -183,7 +142,6 @@ function EditModal({
               <Input name="personnel_name" required defaultValue={transaction.personnel_name} />
             </Label>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <Label label="Reference no.">
               <Input name="reference_no" defaultValue={transaction.reference_no ?? ''} placeholder="ISS-2026-001" />
@@ -192,23 +150,18 @@ function EditModal({
               <Input name="remarks" defaultValue={transaction.remarks ?? ''} placeholder="Optional notes…" />
             </Label>
           </div>
-
           <div className="flex gap-3 pt-1">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="flex-1 bg-white/5 border border-white/10 text-white/70 text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/10 transition-colors"
-            >
-              Cancel
-            </button>
-            {/* ↓ Change save button style here */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 bg-white text-black text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Saving…' : 'Save changes'}
-            </button>
+            <CloseButton
+              label="Cancel"
+              onClose={onCancel}
+              newClassName="flex-1 bg-white/5 border border-white/10 text-white/70 text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/10 transition-colors"
+            />
+            <SubmitButton
+              label="Save changes"
+              loading={loading}
+              loadingLabel="Saving…"
+              newClassName="flex-1 bg-white text-black text-sm font-medium px-4 py-2 rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            />
           </div>
         </form>
       </div>
@@ -216,40 +169,43 @@ function EditModal({
   )
 }
 
-// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
-export function StockPage() {
+const StockPage = () => {
   const [items, setItems] = useState<InventoryItem[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
-
-  // Edit & delete state
+  const [isFailed, setIsFailed] = useState(false)
+  const [toastVisible, setToastVisible] = useState(false)
   const [editTarget, setEditTarget] = useState<Transaction | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [submitLoading, setSubmitLoading] = useState(false)
+
+  const showToast = (msg: string, failed = false) => {
+    setMessage(msg)
+    setIsFailed(failed)
+    setToastVisible(true)
+  }
 
   const load = () => {
     Promise.all([
-      api.get<Paginated<InventoryItem>>('/inventory-items'),
-      api.get<Paginated<Transaction>>('/stock-transactions'),
+      AxiosInstance.get<Paginated<InventoryItem>>('/inventory-items'),
+      AxiosInstance.get<Paginated<Transaction>>('/stock-transactions'),
     ])
       .then(([inv, tx]) => {
-        setItems(inv.data)
-        setTransactions(tx.data)
+        setItems(inv.data.data)
+        setTransactions(tx.data.data)
       })
-      .catch((e: Error) => setError(e.message))
+      .catch((e: Error) => showToast(e.message, true))
   }
 
   useEffect(() => { load() }, [])
 
-  // ── Create ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setMessage('')
-    setError('')
+    setSubmitLoading(true)
     const form = new FormData(e.currentTarget)
     try {
-      await api.post('/stock-transactions', {
+      await AxiosInstance.post('/stock-transactions', {
         inventory_item_id: Number(form.get('inventory_item_id')),
         type: form.get('type'),
         quantity: Number(form.get('quantity')),
@@ -257,46 +213,40 @@ export function StockPage() {
         reference_no: form.get('reference_no'),
         remarks: form.get('remarks'),
       })
-      setMessage('Stock recorded. Webhooks sent for stock.transaction / stock.low.')
+      showToast('Stock recorded. Webhooks sent for stock.transaction / stock.low.')
       e.currentTarget.reset()
       load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to record stock')
+      showToast(err instanceof Error ? err.message : 'Failed to record stock', true)
+    } finally {
+      setSubmitLoading(false)
     }
   }
 
-  // ── Edit ──────────────────────────────────────────────────────────────────
-  // Calls PUT /stock-transactions/:id on your Laravel backend
   const handleEdit = async (id: number, data: Partial<Transaction>) => {
     setActionLoading(true)
-    setMessage('')
-    setError('')
     try {
-      await api.put(`/stock-transactions/${id}`, data)
-      setMessage('Transaction updated successfully.')
+      await AxiosInstance.put(`/stock-transactions/${id}`, data)
+      showToast('Transaction updated successfully.')
       setEditTarget(null)
       load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update transaction')
+      showToast(err instanceof Error ? err.message : 'Failed to update transaction', true)
     } finally {
       setActionLoading(false)
     }
   }
 
-  // ── Delete ────────────────────────────────────────────────────────────────
-  // Calls DELETE /stock-transactions/:id on your Laravel backend
   const handleDelete = async () => {
     if (!deleteTarget) return
     setActionLoading(true)
-    setMessage('')
-    setError('')
     try {
-      await api.delete(`/stock-transactions/${deleteTarget.id}`)
-      setMessage('Transaction deleted.')
+      await AxiosInstance.delete(`/stock-transactions/${deleteTarget.id}`)
+      showToast('Transaction deleted.')
       setDeleteTarget(null)
       load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete transaction')
+      showToast(err instanceof Error ? err.message : 'Failed to delete transaction', true)
     } finally {
       setActionLoading(false)
     }
@@ -305,7 +255,13 @@ export function StockPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
 
-      {/* Modals — rendered above everything else */}
+      <ToastMessage
+        message={message}
+        isFailed={isFailed}
+        isVisible={toastVisible}
+        onClose={() => setToastVisible(false)}
+      />
+
       {editTarget && (
         <EditModal
           transaction={editTarget}
@@ -324,7 +280,6 @@ export function StockPage() {
         />
       )}
 
-      {/* ── Page header ──────────────────────────────────────────────────── */}
       <div>
         <h1 className="text-2xl font-semibold text-white">Stock In / Out</h1>
         <p className="text-sm text-white/30 mt-1">
@@ -332,10 +287,6 @@ export function StockPage() {
         </p>
       </div>
 
-      {message && <Toast message={message} type="success" />}
-      {error && <Toast message={error} type="error" />}
-
-      {/* ── Record movement form ─────────────────────────────────────────── */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <h2 className="text-sm font-medium text-white mb-5">Record movement</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -376,17 +327,16 @@ export function StockPage() {
             </Label>
           </div>
           <div className="pt-1">
-            <button
-              type="submit"
-              className="bg-white text-black text-sm font-medium px-5 py-2 rounded-xl hover:bg-white/90 transition-colors"
-            >
-              Record movement
-            </button>
+            <SubmitButton
+              label="Record movement"
+              loading={submitLoading}
+              loadingLabel="Recording…"
+              newClassName="bg-white text-black text-sm font-medium px-5 py-2 rounded-xl hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            />
           </div>
         </form>
       </div>
 
-      {/* ── Transaction history table ─────────────────────────────────────── */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
         <h2 className="text-sm font-medium text-white mb-4">Transaction history</h2>
         <div className="overflow-x-auto">
@@ -400,39 +350,29 @@ export function StockPage() {
                 <th className="pb-2 font-normal pr-4">Personnel</th>
                 <th className="pb-2 font-normal pr-4">Ref no.</th>
                 <th className="pb-2 font-normal pr-4 text-right">Balance after</th>
-                {/* ↓ Actions column — remove this th and the td below to hide edit/delete */}
                 <th className="pb-2 font-normal text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {transactions.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-white/20 text-sm">
-                    No transactions yet.
-                  </td>
+                  <td colSpan={8} className="py-10 text-center text-white/20 text-sm">No transactions yet.</td>
                 </tr>
               )}
               {transactions.map((t) => (
-                <tr key={t.id} className="text-white/60 hover:bg-white/[0.03] transition-colors">
+                <tr key={t.id} className="text-white/60 hover:bg-white/3 transition-colors">
                   <td className="py-2.5 pr-4 text-white/30 whitespace-nowrap text-xs">
                     {new Date(t.created_at).toLocaleString('en-PH', {
                       month: 'short', day: 'numeric',
                       hour: '2-digit', minute: '2-digit',
                     })}
                   </td>
-                  <td className="py-2.5 pr-4 font-medium text-white/90 whitespace-nowrap">
-                    {t.inventory_item?.name ?? '—'}
-                  </td>
-                  <td className="py-2.5 pr-4">
-                    <TypeBadge type={t.type} />
-                  </td>
+                  <td className="py-2.5 pr-4 font-medium text-white/90 whitespace-nowrap">{t.inventory_item?.name ?? '—'}</td>
+                  <td className="py-2.5 pr-4"><TypeBadge type={t.type} /></td>
                   <td className="py-2.5 pr-4 text-right font-medium text-white/90">{t.quantity}</td>
                   <td className="py-2.5 pr-4 text-white/50">{t.personnel_name}</td>
                   <td className="py-2.5 pr-4 text-white/30 text-xs">{t.reference_no ?? '—'}</td>
                   <td className="py-2.5 pr-4 text-right font-semibold text-white">{t.balance_after}</td>
-
-                  {/* ── Edit / Delete buttons ──────────────────────────────
-                      ↓ Change button styles here                           */}
                   <td className="py-2.5 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
@@ -459,3 +399,5 @@ export function StockPage() {
     </div>
   )
 }
+
+export default StockPage
