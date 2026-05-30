@@ -22,7 +22,7 @@ const LoginForm: FC = () => {
             setErrorMessage("")
 
             await login(username, password)
-            navigate('/genders')
+            navigate('/dashboard')
         } catch (error: any) {
             if (error.response?.status === 401) {
                 setErrors({})

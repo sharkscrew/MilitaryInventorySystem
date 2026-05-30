@@ -1,9 +1,7 @@
-import { useNavigate } from "react-router-dom"
+import { useNavigate, NavLink } from "react-router-dom"
 import { useAuth } from "../contexts/AuthContext"
-import { useState } from "react"
 
 const AppHeader = () => {
-    const [menuOpen, setMenuOpen] = useState(false)
     const { user, logout } = useAuth()
     const navigate = useNavigate()
 
@@ -14,12 +12,32 @@ const AppHeader = () => {
 
     return (
         <nav className="bg-[#242220] fixed w-full z-20 top-0 border-b border-white/10">
-            <div className="max-w-7xl flex items-center justify-between mx-auto p-4">
+            <div className="max-w-7xl flex items-center justify-between mx-auto px-6 py-4">
 
                 {/* Logo */}
-                <span className="text-xl text-white font-semibold whitespace-nowrap">
+                <span className="text-base font-semibold text-white whitespace-nowrap">
                     Military Inventory System
                 </span>
+
+                {/* Center Nav Links */}
+                <div className="flex items-center gap-8">
+                    {[
+                        { label: 'Dashboard', to: '/Dashboard' },
+                        { label: 'Inventory', to: '/Inventory' },
+                        { label: 'Stock', to: '/Stock' },
+                        { label: 'Webhooks', to: '/Webhooks' },
+                    ].map(({ label, to }) => (
+                        <NavLink
+                            key={to}
+                            to={to}
+                            className={({ isActive }) =>
+                                `text-sm transition-colors ${isActive ? 'text-green-400 font-medium' : 'text-white/60 hover:text-white'}`
+                            }
+                        >
+                            {label}
+                        </NavLink>
+                    ))}
+                </div>
 
                 {/* Right: username + sign out */}
                 <div className="flex items-center gap-3">
@@ -36,6 +54,7 @@ const AppHeader = () => {
                         Sign Out
                     </button>
                 </div>
+
             </div>
         </nav>
     )
