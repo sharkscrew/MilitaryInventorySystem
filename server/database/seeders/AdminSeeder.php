@@ -14,7 +14,7 @@ class AdminSeeder extends Seeder
             ['username' => 'admin123'],  // username to find or create
             [
                 'username'   => 'admin123',
-                'password'   => Hash::make('Admin@1234'),
+                'password'   => Hash::make('Admin1234'),
                 'role'       => 'admin',
                 'is_deleted' => false,
                 // add any other required fields your table has
