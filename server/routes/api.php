@@ -10,27 +10,33 @@ use App\Http\Controllers\Api\WebhookDeliveryController;
 use App\Http\Controllers\Api\WebhookSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
-// ✅ Auth routes
+Route::get('/health', fn () => response()->json(['status' => 'ok']));
+
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
     });
+});
 
+Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'summary']);
 
     Route::apiResource('categories', CategoryController::class)->except(['show']);
     Route::apiResource('inventory-items', InventoryItemController::class);
     Route::get('stock-transactions', [StockTransactionController::class, 'index']);
     Route::post('stock-transactions', [StockTransactionController::class, 'store']);
+    Route::put('stock-transactions/{stockTransaction}', [StockTransactionController::class, 'update']);
+    Route::delete('stock-transactions/{stockTransaction}', [StockTransactionController::class, 'destroy']);
 
     Route::get('webhooks/events', [WebhookSubscriptionController::class, 'events']);
     Route::apiResource('webhooks/subscriptions', WebhookSubscriptionController::class)
         ->parameters(['subscriptions' => 'webhookSubscription']);
     Route::get('webhooks/deliveries', [WebhookDeliveryController::class, 'index']);
+});
 
-    Route::post('webhooks/incoming', [IncomingWebhookController::class, 'handle']);
-}); 
+Route::post('webhooks/incoming', [IncomingWebhookController::class, 'handle']);

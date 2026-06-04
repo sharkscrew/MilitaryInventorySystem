@@ -85,7 +85,7 @@ const InventoryPage = () => {
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
-    const form = e.currentTarget
+    const form = new FormData(e.currentTarget)
     try {
       await AxiosInstance.post('/inventory-items', {
         category_id: Number(form.get('category_id')),
@@ -93,7 +93,7 @@ const InventoryPage = () => {
         name: form.get('name'),
         quantity: Number(form.get('quantity')),
         reorder_level: Number(form.get('reorder_level')),
-        location: form.get('location'),
+        location: form.get('location') || null,
       })
       showToast('Item created successfully.')
       form.reset()

@@ -17,6 +17,7 @@ class WebhookApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->actingAsAdmin();
         config(['services.webhook.incoming_secret' => 'test-incoming-secret']);
     }
 

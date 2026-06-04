@@ -11,6 +11,12 @@ class InventoryApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->actingAsAdmin();
+    }
+
     public function test_health_endpoint(): void
     {
         $this->getJson('/api/health')
@@ -34,7 +40,8 @@ class InventoryApiTest extends TestCase
         $this->getJson('/api/dashboard')
             ->assertOk()
             ->assertJsonPath('total_items', 1)
-            ->assertJsonPath('low_stock_items', 1);
+            ->assertJsonPath('low_stock_count', 1)
+            ->assertJsonCount(1, 'low_stock_items');
     }
 
     public function test_stock_issue_reduces_quantity_and_logs_transaction(): void

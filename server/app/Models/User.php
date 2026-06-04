@@ -9,7 +9,7 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasApiTokenS;
+    use HasApiTokens, HasFactory, Notifiable;
 
     // ✅ Point to your actual table
     protected $table = 'tbl_users';
