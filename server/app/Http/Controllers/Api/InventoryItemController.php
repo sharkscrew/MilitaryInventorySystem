@@ -14,7 +14,7 @@ class InventoryItemController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = InventoryItem::query()->with('category');
+        $query = InventoryItem::query()->with(['category', 'supplier']);
 
         if ($request->filled('search')) {
             $search = $request->string('search');
@@ -39,7 +39,7 @@ class InventoryItemController extends Controller
 
     public function show(InventoryItem $inventoryItem): JsonResponse
     {
-        return response()->json($inventoryItem->load(['category', 'stockTransactions' => fn ($q) => $q->latest()->limit(20)]));
+        return response()->json($inventoryItem->load(['category', 'supplier', 'stockTransactions' => fn ($q) => $q->latest()->limit(20)]));
     }
 
     public function store(Request $request): JsonResponse

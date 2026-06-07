@@ -10,6 +10,7 @@ class InventoryItem extends Model
 {
     protected $fillable = [
         'category_id',
+        'supplier_id',
         'item_code',
         'name',
         'description',
@@ -18,6 +19,11 @@ class InventoryItem extends Model
         'reorder_level',
         'location',
         'status',
+        'approval_status',
+        'po_id',
+        'reorder_qty',
+        'urgency',
+        'note',
     ];
 
     protected function casts(): array
@@ -25,12 +31,23 @@ class InventoryItem extends Model
         return [
             'quantity' => 'integer',
             'reorder_level' => 'integer',
+            'reorder_qty' => 'integer',
         ];
     }
 
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function supplier(): BelongsTo
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
     }
 
     public function stockTransactions(): HasMany
