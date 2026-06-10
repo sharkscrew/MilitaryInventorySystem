@@ -41,7 +41,7 @@ class InventoryApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('total_items', 1)
             ->assertJsonPath('low_stock_count', 1)
-            ->assertJsonCount(1, 'low_stock_items');
+            ->assertJsonCount(1, 'inventory_items');
     }
 
     public function test_stock_issue_reduces_quantity_and_logs_transaction(): void

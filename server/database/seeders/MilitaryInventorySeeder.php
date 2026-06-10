@@ -130,7 +130,6 @@ class MilitaryInventorySeeder extends Seeder
                     ...$data,
                     'unit' => 'pcs',
                     'reorder_level' => 10,
-                    'location' => 'Warehouse A',
                 ]
             );
             $item->refreshStatus();

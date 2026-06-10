@@ -74,8 +74,9 @@ const WebhooksPage = () => {
 
   const handleSubscribe = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const formEl = e.currentTarget
     setLoading(true)
-    const form = new FormData(e.currentTarget)
+    const form = new FormData(formEl)
     const selected = form.getAll('events') as string[]
     try {
       await AxiosInstance.post('/webhooks/subscriptions', {
@@ -86,7 +87,7 @@ const WebhooksPage = () => {
         is_active: true,
       })
       showToast('Subscription saved. Outgoing webhooks will POST to your URL with X-Webhook-Signature.')
-      e.currentTarget.reset()
+      formEl.reset()
       load()
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to save subscription', true)

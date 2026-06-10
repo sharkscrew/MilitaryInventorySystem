@@ -15,16 +15,17 @@ class DashboardController extends Controller
     {
         $totalItems = InventoryItem::count();
         $lowStockCount = InventoryItem::whereIn('status', ['low_stock', 'out_of_stock'])->count();
-        $lowStockAlerts = InventoryItem::query()
+        $inventoryItems = InventoryItem::query()
             ->with('category')
-            ->whereIn('status', ['low_stock', 'out_of_stock'])
-            ->orderBy('quantity')
+            ->orderBy('name')
             ->get()
             ->map(fn (InventoryItem $item) => [
                 'id' => $item->id,
+                'item_code' => $item->item_code,
                 'name' => $item->name,
                 'category' => $item->category?->name,
                 'quantity' => $item->quantity,
+                'status' => $item->status,
             ]);
         $totalQuantity = (int) InventoryItem::sum('quantity');
         $recentTransactions = StockTransaction::with('inventoryItem')
@@ -52,7 +53,7 @@ class DashboardController extends Controller
         return response()->json([
             'total_items' => $totalItems,
             'low_stock_count' => $lowStockCount,
-            'low_stock_items' => $lowStockAlerts,
+            'inventory_items' => $inventoryItems,
             'total_quantity' => $totalQuantity,
             'recent_transactions' => $recentTransactions,
             'stock_by_category' => $byCategory,

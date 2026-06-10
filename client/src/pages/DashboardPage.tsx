@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import AxiosInstance from '../services/AxiosInstance'
+import type { DashboardInventoryItem } from '../types'
 
 const BAR_COLORS = [
   'bg-blue-500',
@@ -9,98 +10,128 @@ const BAR_COLORS = [
   'bg-violet-500',
 ]
 
+const STATUS_STYLES: Record<string, string> = {
+  available: 'bg-emerald-500 text-white',
+  low_stock: 'bg-amber-500 text-white',
+  out_of_stock: 'bg-red-500 text-white',
+}
+
+const BoxIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    className="w-9 h-9 text-white/40 shrink-0"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    aria-hidden="true"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
+    />
+  </svg>
+)
+
+const ItemCard = ({ item }: { item: DashboardInventoryItem }) => {
+  const statusStyle =
+    STATUS_STYLES[item.status] ?? 'bg-white/20 text-white/70'
+
+  const meta = item.category
+    ? `${item.item_code} - ${item.category}`
+    : item.item_code
+
+  return (
+    <div className="relative bg-[#2e2c2a] border border-white/5 rounded-xl p-4 min-h-[120px]">
+      <div className="flex items-start gap-3 pr-20">
+        <BoxIcon />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-white leading-snug truncate" title={item.name}>
+            {item.name}
+          </p>
+          <p className="text-4xl font-bold tabular-nums text-white mt-1 leading-none">
+            {item.quantity}
+          </p>
+          <p className="text-xs text-white/35 truncate mt-2" title={meta}>
+            {meta}
+          </p>
+        </div>
+      </div>
+      <span
+        className={`absolute bottom-3 right-3 inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium capitalize ${statusStyle}`}
+      >
+        {item.status.replace(/_/g, ' ')}
+      </span>
+    </div>
+  )
+}
+
+interface CategoryStock {
+  id: number
+  name: string
+  quantity: number
+  itemCount: number
+}
+
 const DashboardPage = () => {
-  const [lowStockItems, setLowStockItems] = useState([])
-  const [stockByCategory, setStockByCategory] = useState([])
+  const [allItems, setAllItems] = useState<DashboardInventoryItem[]>([])
+  const [stockByCategory, setStockByCategory] = useState<CategoryStock[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
     AxiosInstance.get('/dashboard')
       .then((res) => {
-        setLowStockItems(res.data.low_stock_items)
-        setStockByCategory(res.data.stock_by_category)
+        setAllItems(res.data.inventory_items ?? [])
+        setStockByCategory(res.data.stock_by_category ?? [])
       })
-      .catch((e: Error) => setError(e.message))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
-  const maxQty = Math.max(...stockByCategory.map((c: any) => c.quantity ?? 0), 1)
+  const maxQty = Math.max(...stockByCategory.map((c) => c.quantity ?? 0), 1)
 
-  if (loading) return <div className="text-white/40 text-sm py-24 text-center">Loading...</div>
-  if (error) return <div className="text-red-400 text-sm px-4 mt-6">{error}</div>
+  if (loading) {
+    return (
+      <div className="text-white/40 text-sm py-24 text-center animate-pulse">
+        Loading…
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
-
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
-        <p className="text-sm text-white/40 mt-1">
-          {new Date().toLocaleDateString('en-PH', {
-            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-          })}
-        </p>
-      </div>
-
-      {/* Low stock alerts */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <h2 className="text-sm font-medium text-white mb-4">Low stock alerts</h2>
-        <div className="divide-y divide-white/5">
-          {lowStockItems.map((item: any) => (
-            <div key={item.id} className="flex items-center justify-between py-3">
-              <div>
-                <p className="text-sm font-medium text-white/90">{item.name}</p>
-                <p className="text-xs text-white/30 mt-0.5">{item.category}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={`text-sm font-semibold tabular-nums ${item.quantity === 0 ? 'text-red-400' : 'text-amber-400'}`}>
-                  {item.quantity}
-                </span>
-                {item.quantity === 0 ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20">
-                    Out of stock
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                    Low stock
-                  </span>
-                )}
-              </div>
-            </div>
+    <div className="space-y-8">
+      {allItems.length === 0 ? (
+        <p className="py-24 text-center text-sm text-white/30">No inventory items yet.</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {allItems.map((item) => (
+            <ItemCard key={item.id} item={item} />
           ))}
         </div>
-      </div>
+      )}
 
-      {/* Stock by category */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-sm font-medium text-white">Stock by category</h2>
-          <span className="text-xs text-white/30">{stockByCategory.length} categories</span>
-        </div>
-        <div className="space-y-4">
-          {stockByCategory.map((c: any, i: number) => {
-            const pct = Math.round((c.quantity / maxQty) * 100)
-            return (
-              <div key={c.id}>
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className="text-sm text-white/80">{c.name}</span>
-                  <span className="text-xs text-white/30 tabular-nums">
-                    {c.quantity.toLocaleString()} units · {c.itemCount} items
-                  </span>
+      {stockByCategory.length > 0 && (
+        <div className="bg-[#2e2c2a] border border-white/5 rounded-xl p-6">
+          <h2 className="text-sm font-medium text-white mb-5">Stock by category</h2>
+          <div className="space-y-5">
+            {stockByCategory.map((c, i) => {
+              const pct = Math.round((c.quantity / maxQty) * 100)
+              return (
+                <div key={c.id}>
+                  <p className="text-sm text-white/80 mb-2">{c.name}</p>
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${BAR_COLORS[i % BAR_COLORS.length]}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ${BAR_COLORS[i % BAR_COLORS.length]}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
-      </div>
-
+      )}
     </div>
   )
 }

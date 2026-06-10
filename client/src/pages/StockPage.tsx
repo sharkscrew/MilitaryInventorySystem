@@ -202,8 +202,9 @@ const StockPage = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const formEl = e.currentTarget
     setSubmitLoading(true)
-    const form = new FormData(e.currentTarget)
+    const form = new FormData(formEl)
     try {
       await AxiosInstance.post('/stock-transactions', {
         inventory_item_id: Number(form.get('inventory_item_id')),
@@ -214,7 +215,7 @@ const StockPage = () => {
         remarks: form.get('remarks'),
       })
       showToast('Stock recorded. Webhooks sent for stock.transaction / stock.low.')
-      e.currentTarget.reset()
+      formEl.reset()
       load()
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to record stock', true)

@@ -9,13 +9,16 @@ const AxiosInstance = axios.create({
 AxiosInstance.interceptors.request.use((config) => {
     const token = localStorage.getItem('token')
 
+    config.headers['Accept'] = 'application/json'
+    config.headers['X-Requested-With'] = 'XMLHttpRequest'
+
     if (token) {
         config.headers['Authorization'] = `Bearer ${token}`;
     }
 
     if (config.data instanceof FormData) {
-        config.headers["Content-Type"] = "multipart/form-data";
-    } else {
+        delete config.headers['Content-Type']
+    } else if (config.data !== undefined) {
         config.headers['Content-Type'] = 'application/json';
     }
 

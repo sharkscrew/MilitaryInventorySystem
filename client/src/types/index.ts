@@ -13,7 +13,6 @@ export interface InventoryItem {
     quantity: number;
     reorder_level: number;
     status: string;
-    location: string | null;
     unit: string;
     category?: Category;
 }
@@ -47,12 +46,23 @@ export interface WebhookDelivery {
     payload: Record<string, unknown>;
 }
 
+export interface DashboardInventoryItem {
+    id: number;
+    item_code: string;
+    name: string;
+    category: string | null;
+    quantity: number;
+    status: string;
+}
+
+
 export interface DashboardSummary {
     total_items: number;
-    low_stock_items: number;
+    low_stock_count: number;
+    inventory_items: DashboardInventoryItem[];
     total_quantity: number;
     recent_transactions: StockTransaction[];
-    stock_by_category: Array<Category & { total_quantity: number }>;
+    stock_by_category: Array<Category & { quantity: number; itemCount: number }>;
     recent_webhook_deliveries: WebhookDelivery[];
 }
 

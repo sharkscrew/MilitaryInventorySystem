@@ -1,8 +1,12 @@
-import AxiosInstance from '../services/AxiosInstance'
 import { useEffect, useState } from 'react'
-import type { Category, InventoryItem, Paginated } from '../types'
+import type { AxiosError } from 'axios'
 import ToastMessage from '../components/ToastMessage/ToastMessage'
 import SubmitButton from '../components/Button/SubmitButton'
+import type { InventoryItemPayload } from '../interfaces/InventoryInterface'
+import DeleteItemModal from './Inventory/components/DeleteItemModal'
+import EditItemModal from './Inventory/components/EditItemModal'
+import InventoryService from '../services/InventoryService'
+import type { Category, InventoryItem } from '../types'
 
 const STATUS_STYLES: Record<string, string> = {
   available: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
@@ -16,6 +20,11 @@ const FILTER_OPTIONS = [
   { value: 'low_stock', label: 'Low stock' },
   { value: 'out_of_stock', label: 'Out of stock' },
 ]
+
+const getErrorMessage = (err: unknown, fallback: string) => {
+  const axiosErr = err as AxiosError<{ message?: string }>
+  return axiosErr.response?.data?.message ?? (err instanceof Error ? err.message : fallback)
+}
 
 const StatusBadge = ({ status }: { status: string }) => {
   const style = STATUS_STYLES[status] ?? 'bg-white/10 text-white/40 border border-white/10'
@@ -60,6 +69,9 @@ const InventoryPage = () => {
   const [toastVisible, setToastVisible] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
+  const [editTarget, setEditTarget] = useState<InventoryItem | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<InventoryItem | null>(null)
 
   const showToast = (msg: string, failed = false) => {
     setMessage(msg)
@@ -68,41 +80,69 @@ const InventoryPage = () => {
   }
 
   const load = () => {
-    const query = status ? `?status=${status}` : ''
     Promise.all([
-      AxiosInstance.get<Paginated<InventoryItem>>(`/inventory-items${query}`),
-      AxiosInstance.get<Category[]>('/categories'),
+      InventoryService.list(status || undefined),
+      InventoryService.getCategories(),
     ])
       .then(([inv, cats]) => {
         setItems(inv.data.data)
         setCategories(cats.data)
       })
-      .catch((e: Error) => showToast(e.message, true))
+      .catch((err) => showToast(getErrorMessage(err, 'Failed to load inventory'), true))
   }
 
   useEffect(() => { load() }, [status])
 
   const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    const formEl = e.currentTarget
     setLoading(true)
-    const form = new FormData(e.currentTarget)
+    const form = new FormData(formEl)
     try {
-      await AxiosInstance.post('/inventory-items', {
+      await InventoryService.create({
         category_id: Number(form.get('category_id')),
-        item_code: form.get('item_code'),
-        name: form.get('name'),
+        item_code: form.get('item_code') as string,
+        name: form.get('name') as string,
         quantity: Number(form.get('quantity')),
         reorder_level: Number(form.get('reorder_level')),
-        location: form.get('location') || null,
       })
       showToast('Item created successfully.')
-      form.reset()
+      formEl.reset()
       setShowForm(false)
       load()
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to create item', true)
+      showToast(getErrorMessage(err, 'Failed to create item'), true)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEdit = async (id: number, data: InventoryItemPayload) => {
+    setActionLoading(true)
+    try {
+      await InventoryService.update(id, data)
+      showToast('Item updated successfully.')
+      setEditTarget(null)
+      load()
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to update item'), true)
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setActionLoading(true)
+    try {
+      await InventoryService.delete(deleteTarget.id)
+      showToast('Item deleted.')
+      setDeleteTarget(null)
+      load()
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to delete item'), true)
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -115,6 +155,24 @@ const InventoryPage = () => {
         isVisible={toastVisible}
         onClose={() => setToastVisible(false)}
       />
+
+      {editTarget && (
+        <EditItemModal
+          item={editTarget}
+          categories={categories}
+          onSave={handleEdit}
+          onCancel={() => setEditTarget(null)}
+          loading={actionLoading}
+        />
+      )}
+      {deleteTarget && (
+        <DeleteItemModal
+          item={deleteTarget}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+          loading={actionLoading}
+        />
+      )}
 
       <div className="flex items-center justify-between">
         <div>
@@ -160,14 +218,9 @@ const InventoryPage = () => {
                 <Input name="item_code" required placeholder="EQP-003" />
               </Label>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Label label="Name">
-                <Input name="name" required placeholder="Item name" />
-              </Label>
-              <Label label="Location">
-                <Input name="location" placeholder="Warehouse A" />
-              </Label>
-            </div>
+            <Label label="Name">
+              <Input name="name" required placeholder="Item name" />
+            </Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Label label="Quantity">
                 <Input name="quantity" type="number" min="0" defaultValue={0} />
@@ -199,7 +252,7 @@ const InventoryPage = () => {
                 <th className="pb-2 font-normal pr-4 text-right">Qty</th>
                 <th className="pb-2 font-normal pr-4 text-right">Reorder</th>
                 <th className="pb-2 font-normal pr-4">Status</th>
-                <th className="pb-2 font-normal">Location</th>
+                <th className="pb-2 font-normal text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -216,7 +269,24 @@ const InventoryPage = () => {
                   <td className="py-2.5 pr-4 text-right font-semibold text-white">{item.quantity}</td>
                   <td className="py-2.5 pr-4 text-right text-white/30">{item.reorder_level}</td>
                   <td className="py-2.5 pr-4"><StatusBadge status={item.status} /></td>
-                  <td className="py-2.5 text-white/30 text-xs">{item.location ?? '—'}</td>
+                  <td className="py-2.5 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditTarget(item)}
+                        className="px-2.5 py-1 rounded-lg text-xs text-white/50 bg-white/5 border border-white/10 hover:bg-white/10 hover:text-white/80 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(item)}
+                        className="px-2.5 py-1 rounded-lg text-xs text-red-400/70 bg-red-500/5 border border-red-500/10 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
