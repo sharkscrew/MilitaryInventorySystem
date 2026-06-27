@@ -7,6 +7,7 @@ use App\Models\InventoryItem;
 use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class InventoryItemController extends Controller
 {
@@ -46,7 +47,12 @@ class InventoryItemController extends Controller
     {
         $validated = $request->validate([
             'category_id' => ['required', 'exists:categories,id'],
-            'item_code' => ['required', 'string', 'max:50', 'unique:inventory_items,item_code'],
+            'item_code' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('inventory_items', 'item_code')->whereNull('deleted_at'),
+            ],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'unit' => ['nullable', 'string', 'max:50'],
@@ -73,7 +79,14 @@ class InventoryItemController extends Controller
     {
         $validated = $request->validate([
             'category_id' => ['sometimes', 'exists:categories,id'],
-            'item_code' => ['sometimes', 'string', 'max:50', 'unique:inventory_items,item_code,'.$inventoryItem->id],
+            'item_code' => [
+                'sometimes',
+                'string',
+                'max:50',
+                Rule::unique('inventory_items', 'item_code')
+                    ->ignore($inventoryItem->id)
+                    ->whereNull('deleted_at'),
+            ],
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'unit' => ['nullable', 'string', 'max:50'],

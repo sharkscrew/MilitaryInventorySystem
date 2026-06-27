@@ -23,7 +23,7 @@ const ToastMessage: FC<ToastMessageProps> = ({ message, isFailed, isVisible, onC
             <div className={`
                 ${inline
                     ? 'relative w-full mb-4'                              // ✅ inside card
-                    : 'fixed top-40 right-0 md:right-4 z-100000 w-full max-w-sm'  // floating
+                    : 'fixed top-[4.5rem] left-4 right-4 sm:left-auto sm:right-4 z-[100000] sm:w-full sm:max-w-sm'  // floating
                 }
                 flex items-center p-4 text-black 
                 ${isFailed ? 'bg-red-100' : 'bg-green-100'} 

@@ -7,12 +7,12 @@ interface AuthPageLayoutProps {
 const AuthPageLayout: FC<AuthPageLayoutProps> = ({ children }) => {
     return (
         <>
-            <div className="min-h-screen bg-[#2A2826] flex items-center justify-center px-4">
-                <div className="w-full max-w-md bg-[#1e1c1a] border border-white/10 rounded-2xl shadow-2xl p-8">
+            <div className="min-h-screen bg-[#2A2826] flex items-center justify-center px-4 py-6">
+                <div className="w-full max-w-md bg-[#1e1c1a] border border-white/10 rounded-2xl shadow-2xl p-6 sm:p-8">
 
                     {/* Header */}
                     <div className="flex flex-col items-center mb-8">
-                        <span className="text-2xl font-bold text-white tracking-wide">
+                        <span className="text-xl sm:text-2xl font-bold text-white tracking-wide text-center">
                             Military Inventory System
                         </span>
                         <p className="text-slate-400 text-sm mt-1">

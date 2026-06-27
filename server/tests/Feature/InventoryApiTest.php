@@ -62,7 +62,6 @@ class InventoryApiTest extends TestCase
             'type' => 'issue',
             'quantity' => 3,
             'personnel_name' => 'Test Officer',
-            'reference_no' => 'ISS-TEST',
         ])
             ->assertCreated()
             ->assertJsonPath('balance_after', 7);
@@ -98,5 +97,34 @@ class InventoryApiTest extends TestCase
             'quantity' => 5,
             'personnel_name' => 'Test Officer',
         ])->assertStatus(422);
+    }
+
+    public function test_deleting_inventory_item_soft_deletes_record(): void
+    {
+        $category = Category::create(['name' => 'Gear']);
+        $item = InventoryItem::create([
+            'category_id' => $category->id,
+            'item_code' => 'GEAR-03',
+            'name' => 'Pouch',
+            'quantity' => 4,
+            'reorder_level' => 2,
+            'unit' => 'pcs',
+            'status' => 'available',
+        ]);
+
+        $this->deleteJson("/api/inventory-items/{$item->id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Inventory item deleted.');
+
+        $this->assertSoftDeleted('inventory_items', ['id' => $item->id]);
+
+        $this->getJson('/api/inventory-items')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+
+        $this->getJson('/api/dashboard')
+            ->assertOk()
+            ->assertJsonPath('total_items', 0)
+            ->assertJsonCount(0, 'inventory_items');
     }
 }

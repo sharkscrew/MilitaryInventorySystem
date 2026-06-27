@@ -12,8 +12,8 @@ interface DeleteItemModalProps {
 }
 
 const DeleteItemModal: FC<DeleteItemModalProps> = ({ item, onConfirm, onCancel, loading }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-        <div className="relative bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6">
+        <div className="relative bg-neutral-900 border border-white/10 rounded-2xl p-5 sm:p-6 w-full max-w-sm space-y-4">
             <ModalCloseButton onClose={onCancel} />
             <div>
                 <h3 className="text-white font-medium text-base">Delete item?</h3>

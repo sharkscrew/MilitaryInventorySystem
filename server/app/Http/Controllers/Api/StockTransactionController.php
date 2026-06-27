@@ -9,6 +9,7 @@ use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class StockTransactionController extends Controller
@@ -35,12 +36,13 @@ class StockTransactionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'inventory_item_id' => ['required', 'exists:inventory_items,id'],
+            'inventory_item_id' => [
+                'required',
+                Rule::exists('inventory_items', 'id')->whereNull('deleted_at'),
+            ],
             'type' => ['required', 'in:receive,issue,return,adjustment'],
             'quantity' => ['required', 'integer', 'min:1'],
             'personnel_name' => ['required', 'string', 'max:255'],
-            'reference_no' => ['nullable', 'string', 'max:100'],
-            'remarks' => ['nullable', 'string'],
         ]);
 
         $transaction = DB::transaction(function () use ($validated) {
@@ -57,8 +59,6 @@ class StockTransactionController extends Controller
                 'type' => $validated['type'],
                 'quantity' => $quantity,
                 'personnel_name' => $validated['personnel_name'],
-                'reference_no' => $validated['reference_no'] ?? null,
-                'remarks' => $validated['remarks'] ?? null,
                 'balance_after' => $newBalance,
             ]);
         });
@@ -74,17 +74,18 @@ class StockTransactionController extends Controller
     public function update(Request $request, StockTransaction $stockTransaction): JsonResponse
     {
         $validated = $request->validate([
-            'inventory_item_id' => ['sometimes', 'exists:inventory_items,id'],
+            'inventory_item_id' => [
+                'sometimes',
+                Rule::exists('inventory_items', 'id')->whereNull('deleted_at'),
+            ],
             'type' => ['sometimes', 'in:receive,issue,return,adjustment'],
             'quantity' => ['sometimes', 'integer', 'min:1'],
             'personnel_name' => ['sometimes', 'string', 'max:255'],
-            'reference_no' => ['nullable', 'string', 'max:100'],
-            'remarks' => ['nullable', 'string'],
         ]);
 
         $transaction = DB::transaction(function () use ($stockTransaction, $validated) {
             $previous = $stockTransaction->only([
-                'inventory_item_id', 'type', 'quantity', 'personnel_name', 'reference_no', 'remarks',
+                'inventory_item_id', 'type', 'quantity', 'personnel_name',
             ]);
 
             $oldItem = InventoryItem::query()->lockForUpdate()->findOrFail($previous['inventory_item_id']);
@@ -107,8 +108,6 @@ class StockTransactionController extends Controller
                 'type' => $type,
                 'quantity' => $quantity,
                 'personnel_name' => $validated['personnel_name'] ?? $previous['personnel_name'],
-                'reference_no' => $validated['reference_no'] ?? $previous['reference_no'],
-                'remarks' => $validated['remarks'] ?? $previous['remarks'],
                 'balance_after' => $newBalance,
             ]);
         });

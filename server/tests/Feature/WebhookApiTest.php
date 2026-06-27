@@ -94,6 +94,23 @@ class WebhookApiTest extends TestCase
         ]);
     }
 
+    public function test_deleting_webhook_subscription(): void
+    {
+        $subscription = WebhookSubscription::create([
+            'name' => 'Demo Hook',
+            'target_url' => 'https://example.com/hook',
+            'secret' => 'test-secret-minimum-16-chars',
+            'events' => ['inventory.created'],
+            'is_active' => true,
+        ]);
+
+        $this->deleteJson("/api/webhooks/subscriptions/{$subscription->id}")
+            ->assertOk()
+            ->assertJsonPath('message', 'Webhook subscription removed.');
+
+        $this->assertDatabaseMissing('webhook_subscriptions', ['id' => $subscription->id]);
+    }
+
     public function test_incoming_webhook_rejects_invalid_signature(): void
     {
         $this->postJson('/api/webhooks/incoming', [

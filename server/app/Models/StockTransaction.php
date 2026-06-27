@@ -12,8 +12,6 @@ class StockTransaction extends Model
         'type',
         'quantity',
         'personnel_name',
-        'reference_no',
-        'remarks',
         'balance_after',
     ];
 
@@ -27,6 +25,6 @@ class StockTransaction extends Model
 
     public function inventoryItem(): BelongsTo
     {
-        return $this->belongsTo(InventoryItem::class);
+        return $this->belongsTo(InventoryItem::class)->withTrashed();
     }
 }

@@ -7,7 +7,7 @@ import CloseButton from '../components/Button/CloseButton'
 import RemoveButton from '../components/Button/RemoveButton'
 import ModalCloseButton from '../components/Button/modalCloseButton'
 
-type Transaction = StockTransaction & { reference_no?: string; remarks?: string }
+type Transaction = StockTransaction
 
 const TYPE_STYLES: Record<string, string> = {
   receive: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
@@ -58,8 +58,8 @@ const DeleteModal = ({
   onCancel: () => void
   loading: boolean
 }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-    <div className="relative bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-4">
+  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6">
+    <div className="relative bg-neutral-900 border border-white/10 rounded-2xl p-5 sm:p-6 w-full max-w-sm space-y-4">
       <ModalCloseButton onClose={onCancel} />
       <div>
         <h3 className="text-white font-medium text-base">Delete transaction?</h3>
@@ -103,21 +103,19 @@ const EditModal = ({
       type: form.get('type') as string,
       quantity: Number(form.get('quantity')),
       personnel_name: form.get('personnel_name') as string,
-      reference_no: form.get('reference_no') as string,
-      remarks: form.get('remarks') as string,
     })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="relative bg-neutral-900 border border-white/10 rounded-2xl p-6 w-full max-w-lg space-y-5">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto">
+      <div className="relative bg-neutral-900 border border-white/10 rounded-2xl p-5 sm:p-6 w-full max-w-lg space-y-5 max-h-[90vh] overflow-y-auto">
         <ModalCloseButton onClose={onCancel} />
         <div>
           <h3 className="text-white font-medium text-base">Edit transaction</h3>
           <p className="text-white/30 text-xs mt-0.5">Changes will recalculate the balance on the backend.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Label label="Item">
               <Select name="inventory_item_id" required defaultValue={transaction.inventory_item?.id}>
                 {items.map((item) => (
@@ -134,20 +132,12 @@ const EditModal = ({
               </Select>
             </Label>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Label label="Quantity">
               <Input name="quantity" type="number" min="1" required defaultValue={transaction.quantity} />
             </Label>
             <Label label="Personnel name">
               <Input name="personnel_name" required defaultValue={transaction.personnel_name} />
-            </Label>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <Label label="Reference no.">
-              <Input name="reference_no" defaultValue={transaction.reference_no ?? ''} placeholder="ISS-2026-001" />
-            </Label>
-            <Label label="Remarks">
-              <Input name="remarks" defaultValue={transaction.remarks ?? ''} placeholder="Optional notes…" />
             </Label>
           </div>
           <div className="flex gap-3 pt-1">
@@ -211,8 +201,6 @@ const StockPage = () => {
         type: form.get('type'),
         quantity: Number(form.get('quantity')),
         personnel_name: form.get('personnel_name'),
-        reference_no: form.get('reference_no'),
-        remarks: form.get('remarks'),
       })
       showToast('Stock recorded. Webhooks sent for stock.transaction / stock.low.')
       formEl.reset()
@@ -254,7 +242,7 @@ const StockPage = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
 
       <ToastMessage
         message={message}
@@ -282,13 +270,13 @@ const StockPage = () => {
       )}
 
       <div>
-        <h1 className="text-2xl font-semibold text-white">Stock In / Out</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold text-white">Stock In / Out</h1>
         <p className="text-sm text-white/30 mt-1">
           Digital audit trail with personnel name and balance after each movement.
         </p>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5">
         <h2 className="text-sm font-medium text-white mb-5">Record movement</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -319,14 +307,6 @@ const StockPage = () => {
               <Input name="personnel_name" required placeholder="Rank Name" />
             </Label>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Label label="Reference no.">
-              <Input name="reference_no" placeholder="ISS-2026-001" />
-            </Label>
-            <Label label="Remarks">
-              <Input name="remarks" placeholder="Optional notes…" />
-            </Label>
-          </div>
           <div className="pt-1">
             <SubmitButton
               label="Record movement"
@@ -338,10 +318,10 @@ const StockPage = () => {
         </form>
       </div>
 
-      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5">
         <h2 className="text-sm font-medium text-white mb-4">Transaction history</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto -mx-1 px-1">
+          <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="text-left text-xs text-white/30 border-b border-white/5">
                 <th className="pb-2 font-normal pr-4">Date</th>
@@ -349,7 +329,6 @@ const StockPage = () => {
                 <th className="pb-2 font-normal pr-4">Type</th>
                 <th className="pb-2 font-normal pr-4 text-right">Qty</th>
                 <th className="pb-2 font-normal pr-4">Personnel</th>
-                <th className="pb-2 font-normal pr-4">Ref no.</th>
                 <th className="pb-2 font-normal pr-4 text-right">Balance after</th>
                 <th className="pb-2 font-normal text-right">Actions</th>
               </tr>
@@ -357,7 +336,7 @@ const StockPage = () => {
             <tbody className="divide-y divide-white/5">
               {transactions.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-white/20 text-sm">No transactions yet.</td>
+                  <td colSpan={7} className="py-10 text-center text-white/20 text-sm">No transactions yet.</td>
                 </tr>
               )}
               {transactions.map((t) => (
@@ -372,7 +351,6 @@ const StockPage = () => {
                   <td className="py-2.5 pr-4"><TypeBadge type={t.type} /></td>
                   <td className="py-2.5 pr-4 text-right font-medium text-white/90">{t.quantity}</td>
                   <td className="py-2.5 pr-4 text-white/50">{t.personnel_name}</td>
-                  <td className="py-2.5 pr-4 text-white/30 text-xs">{t.reference_no ?? '—'}</td>
                   <td className="py-2.5 pr-4 text-right font-semibold text-white">{t.balance_after}</td>
                   <td className="py-2.5 text-right">
                     <div className="flex items-center justify-end gap-2">
